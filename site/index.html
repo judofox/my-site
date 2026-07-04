@@ -8,7 +8,7 @@
 <meta name="description" content="A personal site dressed as a classic Mac OS desktop. Open the folders." />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;500;600;700&family=Silkscreen:wght@400;700&family=VT323&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=DotGothic16&family=Pixelify+Sans:wght@400;500;600;700&family=Silkscreen:wght@400;700&family=VT323&display=swap" rel="stylesheet">
 <style>
   :root{
     --desktop:#e0a629;
@@ -20,10 +20,11 @@
     --ink:#1c1305;         /* warm near-black chrome text */
     --sel:#2a3fa0;         /* selection blue */
     --sel-soft:#b9c4ee;
-    --win-bg:#ffffff;
+    --win-bg:#fbf8ef;   /* warm paper — easier on the eyes than pure white against the amber desktop */
     --ui:"Pixelify Sans","Geneva","Tahoma",sans-serif;
     --tiny:"Silkscreen","Pixelify Sans",sans-serif;
     --mono:"VT323","Courier New",monospace;
+    --read:"DotGothic16","Geneva",Verdana,sans-serif; /* JRPG dialogue face — pixel vibe, built for reading */
     --shadow:2px 2px 0 rgba(0,0,0,.28), 5px 6px 14px rgba(0,0,0,.22);
   }
   <!-- deploy test 2026-07-03 -->
@@ -48,7 +49,7 @@
     background:
       repeating-linear-gradient(0deg, rgba(0,0,0,.05) 0 1px, transparent 1px 3px),
       radial-gradient(130% 100% at 50% 45%, transparent 60%, rgba(40,24,4,.28) 100%);
-    mix-blend-mode:multiply;opacity:.55}
+    mix-blend-mode:multiply;opacity:.38}
 
   /* ===================== MENU BAR ===================== */
   .menubar{position:fixed;top:0;left:0;right:0;height:23px;z-index:9000;display:flex;align-items:stretch;gap:0;
@@ -87,7 +88,7 @@
 
   /* ===================== WINDOWS ===================== */
   .window{position:absolute;z-index:10;background:var(--plat);border:1.5px solid #000;
-    box-shadow:var(--shadow);display:flex;flex-direction:column;min-width:180px}
+    box-shadow:var(--shadow);display:none;flex-direction:column;min-width:180px}
   .window.collapsed .win-body, .window.collapsed .win-foot{display:none}
   .titlebar{height:20px;display:flex;align-items:center;gap:0;padding:0 5px;cursor:default;position:relative;
     border-bottom:1.5px solid #000;background:var(--plat)}
@@ -143,15 +144,15 @@
   .doc .doc-h{font-size:18px;font-weight:700;margin:0 0 4px;color:#000}
   .doc .doc-sub{font-family:var(--tiny);font-size:9px;color:#777;margin:0 0 12px;letter-spacing:.06em}
   #aboutStage{position:relative;width:100%}
-  .ms-line{position:absolute;left:0;top:0;color:#111;white-space:nowrap;overflow:hidden;font-size:16px}
-  .doc .doc-fallback{font-size:16px;line-height:1.55;column-gap:26px}
+  .ms-line{position:absolute;left:0;top:0;color:#111;white-space:nowrap;overflow:hidden;font-size:16px;font-family:var(--read)}
+  .doc .doc-fallback{font-family:var(--read);font-size:16px;line-height:1.6;column-gap:26px}
 
   /* ---- list view w/ disclosure triangles (accordion) ---- */
   .listview{font-size:13px}
   .lv-head{display:flex;align-items:center;height:18px;border-bottom:1.5px solid #000;background:var(--plat);
     font-weight:600;font-size:12px;position:sticky;top:0}
   .lv-head .c1{flex:1;padding-left:30px} .lv-head .c2{width:96px;border-left:1.5px solid #aaa;padding-left:8px}
-  .lv-row-head{width:100%;text-align:left;background:#fff;border:0;border-bottom:1px solid #e6e6e6;cursor:default;
+  .lv-row-head{width:100%;text-align:left;background:var(--win-bg);border:0;border-bottom:1px solid #e6e6e6;cursor:default;
     display:flex;align-items:center;gap:8px;padding:6px 10px 6px 8px;font-family:inherit;color:#000}
   .lv-row-head:hover{background:#eef1ff}
   .lv-row-head:focus-visible{outline:2px dotted #000;outline-offset:-2px}
@@ -161,8 +162,8 @@
   .lv-ic{width:18px;height:18px;flex:0 0 auto}
   .lv-title{flex:1;font-weight:500}
   .lv-kind{width:96px;color:#888;font-family:var(--tiny);font-size:9px;letter-spacing:.05em}
-  .lv-panel{overflow:hidden;height:0;transition:height .4s cubic-bezier(.2,.85,.25,1);background:#fafafa;border-bottom:1px solid #e6e6e6}
-  .lv-body{padding:8px 14px 14px 40px;color:#222;font-size:13px;line-height:1.5}
+  .lv-panel{overflow:hidden;height:0;transition:height .4s cubic-bezier(.2,.85,.25,1);background:#f5f1e5;border-bottom:1px solid #e6e0d0}
+  .lv-body{padding:8px 14px 14px 40px;color:#1c1c1c;font-family:var(--read);font-size:15px;line-height:22px}
 
   /* ---- photo viewer ---- */
   .photo-view{padding:0;background:#111}
@@ -185,7 +186,7 @@
   .pbtn:active,.pbtn[aria-pressed="true"]{background:linear-gradient(#bdbdbd,#d8d8d8);box-shadow:inset 1px 1px 0 #9a9a9a}
   .pbtn:focus-visible{outline:2px dotted #000;outline-offset:2px}
   .jb-now{font-family:var(--mono);font-size:18px;color:#000;margin:6px 2px 2px}
-  .jb-notes{font-size:13px;line-height:1.55;color:#2a2a2a;margin:8px 2px 2px;
+  .jb-notes{font-family:var(--read);font-size:14px;line-height:1.65;color:#222;margin:8px 2px 2px;
     padding:10px 12px;background:#faf7ef;border:1.5px solid #000;box-shadow:inset 1px 1px 0 #fff}
   .jb-row{display:flex;gap:7px;flex-wrap:wrap;align-items:center;margin-top:8px}
   .jb-input{font-family:var(--ui);font-size:13px;border:1.5px solid #000;padding:4px 9px;flex:1;min-width:160px;
@@ -198,14 +199,14 @@
   .atm .v{font-family:var(--tiny);font-size:9px;color:#777;letter-spacing:.06em}
   .atm .bar{height:12px;border:1.5px solid #000;margin:14px auto 4px;max-width:240px;background:#fff;position:relative;overflow:hidden}
   .atm .bar i{position:absolute;inset:0;width:62%;background:repeating-linear-gradient(90deg,#2a3fa0 0 6px,#4256c8 6px 12px)}
-  .atm p{font-size:13px;line-height:1.5;color:#222;max-width:320px;margin:12px auto 0}
+  .atm p{font-family:var(--read);font-size:14px;line-height:1.65;color:#222;max-width:320px;margin:12px auto 0}
   .atm a{color:#2a3fa0}
 
   /* ---- goals ---- */
   .goals{padding:18px 20px 20px}
   .goal-eyebrow{font-family:var(--tiny);font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:#8a6a1c;margin:0 0 3px}
   .goal-title{font-size:18px;font-weight:700;color:#000;margin:0 0 7px;line-height:1.1}
-  .goal-body{font-size:16px;line-height:1.55;color:#222;margin:0}
+  .goal-body{font-family:var(--read);font-size:15px;line-height:1.7;color:#1c1c1c;margin:0}
   .goal-backed{font-family:var(--ui);font-size:13px;color:#7a6320;margin:9px 0 0;letter-spacing:.01em}
   .goal-sep{height:0;border-top:1.5px solid #000;margin:18px 0;opacity:.85}
   .goal-art{margin:4px 0 12px;border:1.5px solid #000;background:#ecca6a;
@@ -218,10 +219,10 @@
   .mail{padding:14px 16px 16px;position:relative}
   .mail-h{display:flex;align-items:center;gap:9px;margin:0 0 5px}
   .mail-h h3{font-size:17px;font-weight:700;margin:0;color:#000}
-  .mail-lede{font-size:13px;line-height:1.5;color:#444;margin:0 0 13px}
+  .mail-lede{font-family:var(--read);font-size:14px;line-height:1.6;color:#444;margin:0 0 13px}
   .mail-field{display:block;margin:0 0 11px}
   .mail-label{font-family:var(--tiny);font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:#777;margin:0 0 4px;display:block}
-  .mail-input,.mail-text{font-family:var(--ui);font-size:14px;color:#000;width:100%;border:1.5px solid #000;
+  .mail-input,.mail-text{font-family:var(--read);font-size:15px;color:#000;width:100%;border:1.5px solid #000;
     background:#fff;box-shadow:inset 1px 1px 0 #bbb;padding:7px 9px}
   .mail-text{resize:vertical;min-height:96px;line-height:1.45}
   .mail-input:focus,.mail-text:focus{outline:2px solid var(--sel);outline-offset:1px}
@@ -339,7 +340,7 @@
     .alert .pbtn{padding:9px 18px}
     .goals{padding:20px 20px 30px}
     .goal-title{font-size:20px}
-    .goal-body{font-size:17px}
+    .goal-body{font-size:16px}
     .mail-input,.mail-text{font-size:16px}
     .mail-lede{font-size:14px}
   }
@@ -833,7 +834,7 @@ const CONFIG = {
   /* =========================================================
      pretext #3 — About: multi-column doc that re-flows live
      ========================================================= */
-  const AB = { size:16, lh:24, gapX:26, padX:20, padTop:0 };
+  const AB = { size:16, lh:25, gapX:26, padX:20, padTop:0 };
   let abStage, abLines, abPool=[], abWin;
   function layoutAbout(){
     abWin = $("win-about"); abStage = $("aboutStage"); abLines = abStage;
@@ -841,7 +842,7 @@ const CONFIG = {
     const cols = Wc > 360 ? 2 : 1;
     const gapX = cols>1 ? AB.gapX : 0;
     const colW = Math.floor((Wc - (cols-1)*gapX)/cols);
-    const font = `400 ${AB.size}px "Pixelify Sans"`;
+    const font = `400 ${AB.size}px "DotGothic16", sans-serif`;
     if(!has){ abStage.innerHTML = `<p class="doc-fallback" style="column-count:${cols}">${esc(CONFIG.about)}</p>`; return; }
     try{
       const prep = PT.prepareWithSegments(CONFIG.about, font);
@@ -881,7 +882,7 @@ const CONFIG = {
   /* =========================================================
      pretext #5 — list view disclosure triangles (accordion)
      ========================================================= */
-  const LV_BODY = { font:'500 13px "Pixelify Sans"', lh:20 };
+  const LV_BODY = { font:'400 15px "DotGothic16", sans-serif', lh:22 };
   function buildList(){
     const root = $("listRoot"); root.innerHTML="";
     CONFIG.info.forEach(it=>{
@@ -1331,6 +1332,8 @@ const CONFIG = {
     if(document.fonts && document.fonts.ready){
       Promise.all([
         document.fonts.load('400 16px "Pixelify Sans"'),
+        document.fonts.load('400 16px "DotGothic16"'),
+        document.fonts.load('400 15px "DotGothic16"'),
         document.fonts.load('500 13px "Pixelify Sans"'),
         document.fonts.load('600 15px "Pixelify Sans"'),
       ]).catch(()=>{}).then(()=>document.fonts.ready).then(()=>{ layoutAbout(); measureList(); });
