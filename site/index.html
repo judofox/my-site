@@ -962,7 +962,7 @@ const CONFIG = {
     $("jbMoods").innerHTML = CONFIG.moods.map((m,i)=>`<button class="pbtn${m.featured?" feat":""}" type="button" data-i="${i}" aria-pressed="${i===0}">${m.featured?"★ ":""}${esc(m.label)}</button>`).join("");
     $("jbMoods").querySelectorAll(".pbtn").forEach(b=> b.addEventListener("click", ()=>loadMood(+b.dataset.i, true)));
   }
-  function srcFor(v){ const b="https://www.youtube-nocookie.com/embed/", q="rel=0&modestbranding=1&autoplay=1&playsinline=1";
+  function srcFor(v){ const b="https://www.youtube-nocookie.com/embed/", q="rel=0&modestbranding=1&playsinline=1";
     return (v&&typeof v==="object"&&v.list)? b+"videoseries?list="+v.list+"&"+q : b+v+"?"+q; }
   let loadedVid=null;
   function loadMood(i, media){
@@ -1096,14 +1096,14 @@ const CONFIG = {
     setActive(w);
     if(id==="win-about") requestAnimationFrame(layoutAbout);
     if(id==="win-list") requestAnimationFrame(measureList);
-    if(id==="win-music"){ const m=CONFIG.moods[curMood]; if(m && loadedVid!==m.videoId){ loadMood(curMood, true); } else { setKaraoke((m&&m.line)||""); } }
+    if(id==="win-music"){ const m=CONFIG.moods[curMood]; if(m && loadedVid!==m.videoId){ loadMood(curMood, true); } else { setKaraoke((m&&m.line)||""); } loadRecentSpins(); }
     if(id==="win-mail"){ mailLoadT=Date.now(); if(!isMobile()) requestAnimationFrame(()=>{ const n=$("mailNote"); if(n) n.focus(); }); }
     if(isMobile()){
       const b=w.querySelector(".win-body"); if(b) b.scrollTop=0;
     }
   }
   function closeWindow(w, destroy){
-    if(w.id==="win-music"){ $("karaoke").classList.remove("show"); }
+    if(w.id==="win-music"){ $("karaoke").classList.remove("show"); $("player").src="about:blank"; loadedVid=null; }
     if(destroy){ w.remove(); } else { w.style.display="none"; }
     if(activeWin===w) activeWin=null;
     document.querySelectorAll("#iosDock .ios-app.active").forEach(x=>x.classList.remove("active"));
