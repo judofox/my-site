@@ -1,7 +1,32 @@
 {
   "name": "my-site",
+  "main": "src/index.js",
   "compatibility_date": "2026-07-03",
+
+  // Static site keeps working exactly as before.
+  // run_worker_first sends /api/* to the Worker; everything else serves from ./site
   "assets": {
-    "directory": "./site"
-  }
+    "directory": "./site",
+    "binding": "ASSETS",
+    "run_worker_first": ["/api/*"]
+  },
+
+  // KV namespace for Spotify data
+  "kv_namespaces": [
+    { "binding": "SITE_DATA", "id": "df6c8d1ef859469890ef6d921daa5a00" }
+  ],
+
+  // Public config only. Secrets (SPOTIFY_CLIENT_SECRET, SETUP_KEY) go in the
+  // Cloudflare dashboard under Settings -> Variables and Secrets after this deploys.
+  "vars": {
+    "SPOTIFY_CLIENT_ID": "24e658994cd8431288e35c2650268f34",
+    "SITE_ORIGIN": "https://my-site.judofox.workers.dev"
+  },
+
+  // Poll Spotify every 30 minutes
+  "triggers": {
+    "crons": ["*/30 * * * *"]
+  },
+
+  "observability": { "enabled": true }
 }
