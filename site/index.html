@@ -188,6 +188,19 @@
   .jb-now{font-family:var(--mono);font-size:18px;color:#000;margin:6px 2px 2px}
   .jb-notes{font-family:var(--read);font-size:14px;line-height:1.65;color:#222;margin:8px 2px 2px;
     padding:10px 12px;background:#faf7ef;border:1.5px solid #000;box-shadow:inset 1px 1px 0 #fff}
+  .jb-recent{margin:10px 2px 2px;border:1.5px solid #000;background:#faf7ef;box-shadow:inset 1px 1px 0 #fff}
+  .jbr-head{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:5px 10px;
+    border-bottom:1.5px solid #000;background:linear-gradient(#fafafa,#d9d9d9);
+    font-family:var(--ui);font-size:12px;font-weight:600;letter-spacing:.02em}
+  .jbr-live{font-family:var(--ui);font-size:11px;font-weight:500;color:#333;display:flex;align-items:center;gap:5px}
+  .jbr-live::before{content:"";width:7px;height:7px;background:#2f9e44;border:1px solid #000;border-radius:50%}
+  .jbr-list{max-height:132px;overflow-y:auto}
+  .jbr-row{display:flex;align-items:baseline;gap:8px;padding:5px 10px;border-bottom:1px solid #e4ddc9;
+    font-family:var(--read);font-size:14px;color:#1c1c1c}
+  .jbr-row:last-child{border-bottom:none}
+  .jbr-track{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+  .jbr-artist{color:#555;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0}
+  .jbr-when{margin-left:auto;font-family:var(--ui);font-size:11px;color:#666;white-space:nowrap}
   .jb-row{display:flex;gap:7px;flex-wrap:wrap;align-items:center;margin-top:8px}
   .jb-input{font-family:var(--ui);font-size:13px;border:1.5px solid #000;padding:4px 9px;flex:1;min-width:160px;
     background:#fff;box-shadow:inset 1px 1px 0 #bbb}
@@ -510,6 +523,10 @@
       <div class="jb-now" id="jbNow"></div>
       <div class="jb-notes" id="jbNotes"></div>
       <div class="jb-moods" id="jbMoods" role="group" aria-label="Choose a mood"></div>
+      <div class="jb-recent" id="jbRecent" style="display:none">
+        <div class="jbr-head"><span>Recent Spins</span><span class="jbr-live" id="jbrStamp"></span></div>
+        <div class="jbr-list" id="jbrList"></div>
+      </div>
     </div></div>
     <div class="win-foot"><span class="tiny">QuickTime™-ish</span></div>
   </div>
@@ -968,6 +985,33 @@ const CONFIG = {
     if((m=u.match(/embed\/([\w-]{11})/)))return m[1];
     if(/^[\w-]{11}$/.test(u))return u; return null; }
 
+  /* ---------- Recent Spins (live from /api/music) ---------- */
+  function relTime(iso){
+    const s = Math.max(0, (Date.now() - new Date(iso).getTime()) / 1000);
+    if (s < 90) return "just now";
+    const m = Math.round(s/60);   if (m < 60)  return m + "m ago";
+    const h = Math.round(m/60);   if (h < 24)  return h + "h ago";
+    const d = Math.round(h/24);   return d + "d ago";
+  }
+  async function loadRecentSpins(){
+    const box=$("jbRecent"), list=$("jbrList"), stamp=$("jbrStamp");
+    if(!box) return;
+    try{
+      const res = await fetch("/api/music");
+      if(!res.ok) return;               // no data yet -> strip stays hidden
+      const data = await res.json();
+      const tracks = (data.tracks||[]).slice(0,8);
+      if(!tracks.length) return;
+      list.innerHTML = tracks.map(t=>
+        `<div class="jbr-row"><span class="jbr-track">${esc(t.name)}</span>` +
+        `<span class="jbr-artist">${esc((t.artists||[]).join(", "))}</span>` +
+        `<span class="jbr-when">${esc(relTime(t.playedAt))}</span></div>`).join("");
+      stamp.textContent = "live";
+      stamp.title = "synced " + relTime(data.updatedAt);
+      box.style.display = "block";
+    }catch(e){ /* offline or API down -> stay hidden, site unaffected */ }
+  }
+
   function setKaraoke(text){
     const k=$("karaoke"); $("karaokeText").textContent = text||"";
     if(text && $("win-music").style.display!=="none" && !$("win-music").classList.contains("hidden-init")) k.classList.add("show");
@@ -1314,7 +1358,7 @@ const CONFIG = {
 
   /* ---------- boot ---------- */
   function boot(){
-    buildHD(); buildPhotos(); buildList(); buildMoods(); buildMobileHome(); buildIOS(); wireMail();
+    buildHD(); buildPhotos(); buildList(); buildMoods(); buildMobileHome(); buildIOS(); wireMail(); loadRecentSpins();
     loadMood(0, false); $("karaoke").classList.remove("show");
     // wire all static windows; hide them initially
     document.querySelectorAll(".window").forEach(w=>{ wireWindow(w, { destroyOnClose: w.id.startsWith("photo-win") }); w.style.display="none"; });
