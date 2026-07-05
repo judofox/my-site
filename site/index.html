@@ -201,6 +201,12 @@
   .jbr-track{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
   .jbr-artist{color:#555;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0}
   .jbr-when{margin-left:auto;font-family:var(--ui);font-size:11px;color:#666;white-space:nowrap}
+  .jbr-embed{display:none;border-bottom:1.5px solid #000;background:#e8e0cc;line-height:0}
+  .jbr-row[data-tid]{cursor:pointer}
+  .jbr-row[data-tid]:hover{background:#f2ecdb}
+  .jbr-row.playing{background:#ece2c6}
+  .jbr-row[data-tid] .jbr-track::before{content:"▸ ";color:#8a7a5c}
+  .jbr-row.playing .jbr-track::before{content:"♪ ";color:#4a3423}
   .jb-moodread{margin:10px 2px 2px;border:1.5px solid #000;background:#faf7ef;box-shadow:inset 1px 1px 0 #fff}
   .jbm-body{display:flex;gap:10px;align-items:flex-start;padding:9px 11px}
   .jbm-emoji{font-size:24px;line-height:1.1}
@@ -344,7 +350,9 @@
     /* windows become fullscreen "apps" that slide up over the home screen */
     .window{position:fixed !important;left:0 !important;right:0 !important;top:26px !important;bottom:0 !important;
       width:auto !important;height:auto !important;border-radius:18px 18px 0 0;overflow:hidden;
-      z-index:1000;box-shadow:0 -3px 0 rgba(0,0,0,.15),0 -12px 34px rgba(0,0,0,.4)}
+      z-index:2000 !important;box-shadow:0 -3px 0 rgba(0,0,0,.15),0 -12px 34px rgba(0,0,0,.4)}
+    .win-body{padding-bottom:calc(34px + env(safe-area-inset-bottom)) !important}
+    .jbr-list{max-height:200px}
     .window::after{display:none}
     .rsz{display:none !important}
     .win-foot{display:none}
@@ -555,6 +563,7 @@
       </div>
       <div class="jb-recent" id="jbRecent" style="display:none">
         <div class="jbr-head"><span>Recent Spins</span><span class="jbr-live" id="jbrStamp"></span></div>
+        <div class="jbr-embed" id="jbrEmbed"></div>
         <div class="jbr-list" id="jbrList"></div>
       </div>
     </div></div>
@@ -1175,9 +1184,18 @@ const CONFIG = {
       const tracks = (data.tracks||[]).slice(0,8);
       if(!tracks.length) return;
       list.innerHTML = tracks.map(t=>
-        `<div class="jbr-row"><span class="jbr-track">${esc(t.name)}</span>` +
+        `<div class="jbr-row"${t.id?` data-tid="${esc(t.id)}"`:""} title="${t.id?"play on spotify":""}">` +
+        `<span class="jbr-track">${esc(t.name)}</span>` +
         `<span class="jbr-artist">${esc((t.artists||[]).join(", "))}</span>` +
         `<span class="jbr-when">${esc(relTime(t.playedAt))}</span></div>`).join("");
+      list.onclick = e=>{
+        const row = e.target.closest(".jbr-row"); if(!row || !row.dataset.tid) return;
+        const em = $("jbrEmbed");
+        em.innerHTML = `<iframe src="https://open.spotify.com/embed/track/${row.dataset.tid}?theme=0" width="100%" height="80" frameborder="0" allow="encrypted-media; clipboard-write; picture-in-picture" loading="lazy" style="display:block;border:0"></iframe>`;
+        em.style.display = "block";
+        list.querySelectorAll(".jbr-row.playing").forEach(r=>r.classList.remove("playing"));
+        row.classList.add("playing");
+      };
       stamp.textContent = "live";
       stamp.title = "synced " + relTime(data.updatedAt);
       box.style.display = "block";
@@ -1276,7 +1294,7 @@ const CONFIG = {
     }
   }
   function closeWindow(w, destroy){
-    if(w.id==="win-music"){ $("karaoke").classList.remove("show"); $("player").src="about:blank"; loadedVid=null; }
+    if(w.id==="win-music"){ $("karaoke").classList.remove("show"); $("player").src="about:blank"; loadedVid=null; const em=$("jbrEmbed"); if(em){ em.innerHTML=""; em.style.display="none"; } }
     if(destroy){ w.remove(); } else { w.style.display="none"; }
     if(activeWin===w) activeWin=null;
     document.querySelectorAll("#iosDock .ios-app.active").forEach(x=>x.classList.remove("active"));

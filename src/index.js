@@ -36,7 +36,7 @@ export default {
         case "/api/login":        return login(url, env);
         case "/api/callback":     return callback(url, env);
         case "/api/sync":         return manualSync(url, env);
-        case "/api/music":        return music(env);
+        case "/api/music":        return music(env, ctx);
         case "/api/mood":         return mood(env);
         case "/api/mood/refresh": return moodRefresh(url, env);
         case "/api/gotchi":       return gotchi(env);
@@ -141,11 +141,15 @@ async function manualSync(url, env) {
   return json(result);
 }
 
-async function music(env) {
+async function music(env, ctx) {
   const recent = await env.SITE_DATA.get("spotify:recent", "json");
   if (!recent) return json({ error: "no data yet" }, 404);
+  // stale-while-revalidate: serve the snapshot instantly; if it's older than
+  // 8 minutes, kick a background sync so the next visitor gets fresh data.
+  const ageMs = Date.now() - Date.parse(recent.updatedAt);
+  if (ageMs > 8 * 60000 && ctx) ctx.waitUntil(syncSpotify(env));
   return json(recent, 200, {
-    "Cache-Control": "public, max-age=300",
+    "Cache-Control": "public, max-age=60",
     "Access-Control-Allow-Origin": "*",
   });
 }
