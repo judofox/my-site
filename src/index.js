@@ -39,6 +39,7 @@ export default {
         case "/api/music":        return music(env);
         case "/api/mood":         return mood(env);
         case "/api/mood/refresh": return moodRefresh(url, env);
+        case "/api/gotchi":       return gotchi(env);
         default:
           return json({ error: "not found" }, 404);
       }
@@ -50,7 +51,10 @@ export default {
 
   async scheduled(event, env, ctx) {
     ctx.waitUntil(
-      syncSpotify(env).then(() => maybeGenerateMood(env, false)),
+      Promise.all([
+        syncSpotify(env).then(() => maybeGenerateMood(env, false)),
+        advanceGotchi(env),
+      ]),
     );
   },
 };
@@ -71,6 +75,7 @@ async function health(env) {
     trackCount: recent?.tracks?.length ?? 0,
     llm: { provider: env.LLM_PROVIDER ?? "anthropic", model: env.LLM_MODEL ?? null, keySet: Boolean(env.LLM_API_KEY) },
     moodDay: cur?.day ?? null,
+    gotchi: (await env.SITE_DATA.get("gotchi:state", "json"))?.activity ?? null,
   });
 }
 
@@ -387,6 +392,104 @@ function defaultModel(provider) {
   if (provider === "google") return "gemini-2.0-flash";
   return "";
 }
+
+/* ---------------- gotchi engine ----------------
+ * One canonical fox, watch-only, Tabikaeru-style. State lives in KV and is
+ * advanced lazily: whenever the cron fires or /api/gotchi is hit past `until`,
+ * a new activity is rolled. Sleeps 23:30-08:30 NY. Never repeats an activity
+ * back-to-back. Keeps a 20-entry life log. */
+
+const GOTCHI_NAME = "kitsu";
+
+const GOTCHI_ACTIVITIES = [
+  { id: "reading",   w: 20, min: 45, max: 120, notes: [
+      "reading something dense. pretends to understand.",
+      "halfway through a book he will not finish.",
+      "reading. tail doing its own thing." ] },
+  { id: "snacking",  w: 12, min: 20, max: 45, notes: [
+      "found the good snacks.",
+      "eating like nobody's watching. nobody is.",
+      "second breakfast. zero regrets." ] },
+  { id: "tinkering", w: 15, min: 40, max: 110, notes: [
+      "taking something apart. confidence high.",
+      "building something. blueprint optional.",
+      "tinkering. there are parts left over. probably fine." ] },
+  { id: "napping",   w: 12, min: 30, max: 80, notes: [
+      "brief nap that will not stay brief.",
+      "claimed the one sunbeam.",
+      "recharging. do not disturb." ] },
+  { id: "window",    w: 13, min: 25, max: 70, notes: [
+      "staring out the window. thinking about weather.",
+      "watching the street. judging pigeons.",
+      "window duty. nothing to report." ] },
+  { id: "out",       w: 18, min: 90, max: 260, notes: [
+      "left. didn't say where.",
+      "out. took the good bag.",
+      "gone exploring. door left ajar." ] },
+];
+
+const GOTCHI_SLEEP_NOTES = [
+  "curled up. out cold.",
+  "sleeping. ears still on duty.",
+  "dreaming about snacks, presumably.",
+];
+
+async function gotchi(env) {
+  const state = await advanceGotchi(env);
+  return json({ name: GOTCHI_NAME, ...state }, 200, {
+    "Cache-Control": "public, max-age=60",
+    "Access-Control-Allow-Origin": "*",
+  });
+}
+
+async function advanceGotchi(env) {
+  let state = await env.SITE_DATA.get("gotchi:state", "json");
+  const now = Date.now();
+  if (state && now < Date.parse(state.until)) return state;
+
+  const ny = nyClock();
+  const mins = ny.h * 60 + ny.m;
+  const BED = 23 * 60 + 30, WAKE = 8 * 60 + 30;
+
+  let activity, durMin, note;
+  if (mins >= BED || mins < WAKE) {
+    activity = "sleeping";
+    durMin = mins >= BED ? (24 * 60 - mins) + WAKE : WAKE - mins;
+    note = pick(GOTCHI_SLEEP_NOTES);
+  } else {
+    const pool = GOTCHI_ACTIVITIES.filter((a) => a.id !== state?.activity);
+    const totalW = pool.reduce((n, a) => n + a.w, 0);
+    let r = Math.random() * totalW, chosen = pool[0];
+    for (const a of pool) { r -= a.w; if (r <= 0) { chosen = a; break; } }
+    activity = chosen.id;
+    durMin = chosen.min + Math.floor(Math.random() * (chosen.max - chosen.min));
+    durMin = Math.min(durMin, Math.max(10, BED - mins)); // never run past bedtime
+    note = pick(chosen.notes);
+  }
+
+  const log = (state?.log ?? []).slice(-19);
+  log.push({ t: new Date(now).toISOString(), activity, note });
+
+  state = {
+    activity,
+    note,
+    since: new Date(now).toISOString(),
+    until: new Date(now + durMin * 60000).toISOString(),
+    log,
+  };
+  await env.SITE_DATA.put("gotchi:state", JSON.stringify(state));
+  return state;
+}
+
+function nyClock() {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/New_York", hour: "numeric", minute: "numeric", hour12: false,
+  }).formatToParts(new Date());
+  const get = (t) => Number(parts.find((p) => p.type === t)?.value ?? 0);
+  return { h: get("hour") % 24, m: get("minute") };
+}
+
+function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
 
 /* ---------------- helpers ---------------- */
 

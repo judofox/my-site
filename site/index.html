@@ -201,6 +201,22 @@
   .jbr-track{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
   .jbr-artist{color:#555;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0}
   .jbr-when{margin-left:auto;font-family:var(--ui);font-size:11px;color:#666;white-space:nowrap}
+  .jb-moodread{margin:10px 2px 2px;border:1.5px solid #000;background:#faf7ef;box-shadow:inset 1px 1px 0 #fff}
+  .jbm-body{display:flex;gap:10px;align-items:flex-start;padding:9px 11px}
+  .jbm-emoji{font-size:24px;line-height:1.1}
+  .jbm-txt{min-width:0}
+  .jbm-word{font-family:var(--ui);font-size:13px;font-weight:600;letter-spacing:.02em}
+  .jbm-blurb{font-family:var(--read);font-size:14px;line-height:1.5;color:#333;margin-top:2px}
+  .gotchi{display:flex;flex-direction:column;gap:9px;padding:10px;height:100%;box-sizing:border-box}
+  .gx-scene{border:1.5px solid #000;box-shadow:inset 1px 1px 0 #fff;background:#efe3c8;line-height:0;flex-shrink:0}
+  .gx-scene svg{width:100%;height:auto;display:block}
+  .gx-status{font-family:var(--read);font-size:14px;color:#222;display:flex;gap:8px;align-items:center;padding:0 2px}
+  .gx-dot{width:8px;height:8px;background:#e8944a;border:1px solid #000;border-radius:50%;flex-shrink:0}
+  .gx-dot.away{background:#bbb}
+  .gx-log{flex:1;min-height:60px;overflow-y:auto;border:1.5px solid #000;background:#faf7ef;box-shadow:inset 1px 1px 0 #fff}
+  .gx-row{display:flex;gap:9px;padding:5px 10px;border-bottom:1px solid #e4ddc9;font-family:var(--read);font-size:13px;color:#1c1c1c}
+  .gx-row:last-child{border-bottom:none}
+  .gx-t{font-family:var(--ui);font-size:11px;color:#666;white-space:nowrap;margin-top:2px}
   .jb-row{display:flex;gap:7px;flex-wrap:wrap;align-items:center;margin-top:8px}
   .jb-input{font-family:var(--ui);font-size:13px;border:1.5px solid #000;padding:4px 9px;flex:1;min-width:160px;
     background:#fff;box-shadow:inset 1px 1px 0 #bbb}
@@ -425,6 +441,10 @@
   </div>
 
   <!-- ===== DESKTOP ICONS ===== -->
+  <div class="desk-icon scatter" id="ic-fox" data-open="win-gotchi" tabindex="0" style="top:374px;left:24px">
+    <div class="ig"><svg width="44" height="44" viewBox="0 0 44 44"><g stroke="#4a3423" stroke-width="1.6" stroke-linejoin="round"><path d="M8 7 L17 14 L27 14 L36 7 L34 21 C34 30 29 36 22 36 C15 36 10 30 10 21 Z" fill="#e8944a"/><path d="M8 7 L17 14 L12.5 18 Z" fill="#c96f2e"/><path d="M36 7 L27 14 L31.5 18 Z" fill="#c96f2e"/><path d="M22 36 C18 36 15 33 14 28.5 C17 30.7 20 31.6 22 31.6 C24 31.6 27 30.7 30 28.5 C29 33 26 36 22 36 Z" fill="#fff3dc" stroke="none"/><circle cx="17.5" cy="22.5" r="1.7" fill="#4a3423" stroke="none"/><circle cx="26.5" cy="22.5" r="1.7" fill="#4a3423" stroke="none"/><path d="M20.2 27 h3.6 l-1.8 2.3 Z" fill="#4a3423" stroke="none"/></g></svg></div>
+    <div class="il">fox.exe</div>
+  </div>
   <div class="desk-icon scatter" id="ic-hd" data-open="win-hd" tabindex="0" style="top:36px;left:24px">
     <div class="ig"><svg width="46" height="44" viewBox="0 0 46 44"><g stroke="#000" stroke-width="1.5"><path d="M5 14 L23 6 L41 14 L41 30 L23 38 L5 30 Z" fill="#c9c9c9"/><path d="M5 14 L23 22 L41 14" fill="none"/><path d="M23 22 L23 38" fill="none"/><rect x="11" y="20" width="9" height="3" fill="#7fa7d8" stroke="none"/></g></svg></div>
     <div class="il">Macintosh HD</div>
@@ -523,6 +543,16 @@
       <div class="jb-now" id="jbNow"></div>
       <div class="jb-notes" id="jbNotes"></div>
       <div class="jb-moods" id="jbMoods" role="group" aria-label="Choose a mood"></div>
+      <div class="jb-moodread" id="jbMood" style="display:none">
+        <div class="jbr-head"><span>Mood Ring</span><span class="jbr-live" id="jbMoodDay"></span></div>
+        <div class="jbm-body">
+          <span class="jbm-emoji" id="jbMoodEmoji"></span>
+          <div class="jbm-txt">
+            <div class="jbm-word" id="jbMoodWord"></div>
+            <div class="jbm-blurb" id="jbMoodBlurb"></div>
+          </div>
+        </div>
+      </div>
       <div class="jb-recent" id="jbRecent" style="display:none">
         <div class="jbr-head"><span>Recent Spins</span><span class="jbr-live" id="jbrStamp"></span></div>
         <div class="jbr-list" id="jbrList"></div>
@@ -576,6 +606,100 @@
       <p class="mail-priv">Sent privately to David. A way to reach you is optional — it just means he can write back. (⌘↵ to send.)</p>
     </div></div>
     <div class="win-foot"><span class="tiny">most drafts go nowhere · this one actually sends</span></div>
+  </div>
+
+  <!-- fox.exe -->
+  <div class="window" id="win-gotchi" style="width:436px;height:540px;top:58px;left:310px" data-title="fox.exe">
+    <div class="titlebar"><span class="t-title">fox.exe</span>
+      <div class="win-ctrls"><span class="wc shade" data-wc="shade"></span><span class="wc zoom" data-wc="zoom"></span><span class="wc close" data-wc="close"></span></div></div>
+    <div class="win-body"><div class="gotchi">
+      <div class="gx-scene"><svg viewBox="0 0 440 300" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="kitsu's room">
+        <rect width="440" height="300" fill="#efe3c8"/>
+        <path d="M0 210 H440 V300 H0 Z" fill="#dcbc8e"/>
+        <path d="M0 210 H440" stroke="#4a3423" stroke-width="2.5"/>
+        <path d="M0 244 H440 M0 274 H440" stroke="#c9a271" stroke-width="1.6"/>
+        <path d="M90 244 V274 M230 210 V244 M340 244 V274 M160 274 V300" stroke="#c9a271" stroke-width="1.6"/>
+        <!-- round window -->
+        <circle cx="348" cy="88" r="42" fill="#f7efdd" stroke="#4a3423" stroke-width="3"/>
+        <circle cx="348" cy="88" r="32" fill="#bfdcec" stroke="#4a3423" stroke-width="2"/>
+        <path d="M348 56 V120 M316 88 H380" stroke="#4a3423" stroke-width="2"/>
+        <path d="M322 100 q12 -9 24 0 q12 -9 22 0" fill="none" stroke="#8fb9d2" stroke-width="2.4"/>
+        <!-- shelf -->
+        <rect x="34" y="76" width="104" height="8" fill="#b98a52" stroke="#4a3423" stroke-width="2"/>
+        <rect x="44" y="52" width="11" height="24" fill="#c46a5a" stroke="#4a3423" stroke-width="1.8"/>
+        <rect x="57" y="46" width="11" height="30" fill="#7f9fc9" stroke="#4a3423" stroke-width="1.8"/>
+        <rect x="70" y="55" width="10" height="21" fill="#d9b23f" stroke="#4a3423" stroke-width="1.8"/>
+        <path d="M100 58 h20 v18 h-20 Z M100 62 h20" fill="#f2ead6" stroke="#4a3423" stroke-width="1.8"/>
+        <rect x="34" y="118" width="104" height="8" fill="#b98a52" stroke="#4a3423" stroke-width="2"/>
+        <path d="M52 118 v-14 a10 10 0 0 1 20 0 v14 Z" fill="#a9c48f" stroke="#4a3423" stroke-width="1.8"/>
+        <circle cx="106" cy="108" r="9" fill="#e2a9b8" stroke="#4a3423" stroke-width="1.8"/>
+        <!-- bed -->
+        <ellipse cx="92" cy="248" rx="64" ry="27" fill="#8fa8cf" stroke="#4a3423" stroke-width="2.2"/>
+        <ellipse cx="58" cy="236" rx="23" ry="12" fill="#f2ead6" stroke="#4a3423" stroke-width="2"/>
+        <!-- rug -->
+        <ellipse cx="258" cy="258" rx="74" ry="23" fill="#e2a9b8" stroke="#4a3423" stroke-width="2.2"/>
+        <ellipse cx="258" cy="258" rx="54" ry="15" fill="none" stroke="#f2d3da" stroke-width="3"/>
+        <!-- curled fox (sleep / nap) -->
+        <g id="gxCurl" transform="translate(92,240)" style="display:none">
+          <path d="M16 12 C 36 16, 40 -2, 28 -8 C 38 2, 32 12, 14 15 Z" fill="#e8944a" stroke="#4a3423" stroke-width="2"/>
+          <circle cx="31" cy="-3" r="5.5" fill="#fff3dc" stroke="#4a3423" stroke-width="1.6"/>
+          <circle r="23" fill="#e8944a" stroke="#4a3423" stroke-width="2.2"/>
+          <path d="M-15 -17 L-10 -29 L-3 -19 Z" fill="#e8944a" stroke="#4a3423" stroke-width="2"/>
+          <path d="M-12.5 -20.5 L-10 -26.5 L-6.5 -21.5 Z" fill="#6b4a2f" stroke="none"/>
+          <ellipse cx="-4" cy="4" rx="10" ry="7" fill="#fff3dc" stroke="none"/>
+          <path d="M-14 -4 q3.5 3 7 0" fill="none" stroke="#4a3423" stroke-width="2" stroke-linecap="round"/>
+          <path d="M-6 2 h4 l-2 2.4 Z" fill="#4a3423" stroke="none"/>
+        </g>
+        <text id="gxZzz" x="142" y="222" font-size="17" fill="#7d6a4f" style="display:none;font-weight:600">z z z</text>
+        <!-- sitting fox (reading / snacking / tinkering / window) -->
+        <g id="gxSit" transform="translate(258,212)" style="display:none">
+          <path d="M20 4 C 38 8, 40 -10, 30 -15 C 39 -6, 34 5, 18 8 Z" fill="#e8944a" stroke="#4a3423" stroke-width="2"/>
+          <circle cx="33" cy="-10" r="5.5" fill="#fff3dc" stroke="#4a3423" stroke-width="1.6"/>
+          <path d="M0 -34 C 15 -30, 21 -8, 19 5 C 17 14, -17 14, -19 5 C -21 -8, -15 -30, 0 -34 Z" fill="#e8944a" stroke="#4a3423" stroke-width="2.2"/>
+          <ellipse cx="0" cy="0" rx="11" ry="12" fill="#fff3dc" stroke="none"/>
+          <circle cx="0" cy="-44" r="16" fill="#e8944a" stroke="#4a3423" stroke-width="2.2"/>
+          <path d="M-15 -51 L-12 -70 L-1 -56 Z" fill="#e8944a" stroke="#4a3423" stroke-width="2"/>
+          <path d="M15 -51 L12 -70 L1 -56 Z" fill="#e8944a" stroke="#4a3423" stroke-width="2"/>
+          <path d="M-11.5 -56.5 L-10 -65.5 L-5 -58 Z" fill="#6b4a2f" stroke="none"/>
+          <path d="M11.5 -56.5 L10 -65.5 L5 -58 Z" fill="#6b4a2f" stroke="none"/>
+          <ellipse cx="0" cy="-38" rx="8.5" ry="6" fill="#fff3dc" stroke="none"/>
+          <circle cx="-5.5" cy="-46" r="1.8" fill="#4a3423"/>
+          <circle cx="5.5" cy="-46" r="1.8" fill="#4a3423"/>
+          <path d="M-1.9 -40.5 h3.8 l-1.9 2.4 Z" fill="#4a3423" stroke="none"/>
+        </g>
+        <!-- table (in front of sitting fox) -->
+        <g id="gxTable">
+          <rect x="248" y="242" width="20" height="24" fill="#a4763f" stroke="#4a3423" stroke-width="2"/>
+          <ellipse cx="258" cy="238" rx="46" ry="14" fill="#c8965e" stroke="#4a3423" stroke-width="2.2"/>
+          <ellipse cx="258" cy="235" rx="46" ry="14" fill="#d8a86e" stroke="#4a3423" stroke-width="2.2"/>
+        </g>
+        <!-- props -->
+        <g id="gxPropBook" style="display:none">
+          <path d="M240 230 L258 226 L276 230 L258 235 Z" fill="#c46a5a" stroke="#4a3423" stroke-width="2"/>
+          <path d="M244 228.5 L258 225.5 L272 228.5" fill="none" stroke="#f2ead6" stroke-width="2"/>
+        </g>
+        <g id="gxPropBowl" style="display:none">
+          <path d="M244 228 a14 8 0 0 0 28 0 Z" fill="#7f9fc9" stroke="#4a3423" stroke-width="2"/>
+          <circle cx="252" cy="226" r="2" fill="#f2ead6"/><circle cx="260" cy="228" r="2" fill="#f2ead6"/><circle cx="266" cy="225.5" r="2" fill="#f2ead6"/>
+        </g>
+        <g id="gxPropTools" style="display:none">
+          <path d="M242 231 l14 -7 m0 0 a4 4 0 1 0 5 -4 a4 4 0 1 0 -5 4" fill="none" stroke="#8a8a8a" stroke-width="3.4" stroke-linecap="round"/>
+          <circle cx="268" cy="230" r="3" fill="#c46a5a" stroke="#4a3423" stroke-width="1.5"/>
+          <circle cx="274" cy="226" r="2.4" fill="#d9b23f" stroke="#4a3423" stroke-width="1.5"/>
+        </g>
+        <g id="gxPropNote" style="display:none">
+          <rect x="246" y="222" width="24" height="16" rx="1.5" fill="#fdfaf0" stroke="#4a3423" stroke-width="1.8" transform="rotate(-6 258 230)"/>
+          <path d="M251 228 h13 M251 232 h9" stroke="#9a8a70" stroke-width="1.6" transform="rotate(-6 258 230)"/>
+        </g>
+        <!-- plant -->
+        <path d="M394 268 h30 l-4 22 h-22 Z" fill="#c46a5a" stroke="#4a3423" stroke-width="2"/>
+        <path d="M409 268 C 402 250, 394 248, 390 252 C 396 256, 402 262, 409 268 Z" fill="#7ea86a" stroke="#4a3423" stroke-width="1.8"/>
+        <path d="M409 268 C 410 246, 405 240, 409 236 C 415 244, 413 258, 409 268 Z" fill="#8fbb7a" stroke="#4a3423" stroke-width="1.8"/>
+        <path d="M409 268 C 416 252, 424 250, 428 254 C 421 258, 415 263, 409 268 Z" fill="#7ea86a" stroke="#4a3423" stroke-width="1.8"/>
+      </svg></div>
+      <div class="gx-status"><span class="gx-dot" id="gxDot"></span><span id="gxStatus">connecting to kitsu…</span></div>
+      <div class="gx-log" id="gxLog"></div>
+    </div></div>
   </div>
 
   <!-- Goals -->
@@ -717,6 +841,7 @@ const CONFIG = {
 
   /* ---------- icons for grids / lists ---------- */
   const folderIcon = (c="#9aa9e0") => `<svg width="46" height="38" viewBox="0 0 46 38"><path d="M3 8 h14 l4 4 h22 v22 a2 2 0 0 1 -2 2 H5 a2 2 0 0 1 -2 -2 Z" fill="${c}" stroke="#000" stroke-width="1.5"/><path d="M3 12 h40" stroke="#000" stroke-width="1" opacity="0.4"/></svg>`;
+  const foxIcon = `<svg width="44" height="44" viewBox="0 0 44 44"><g stroke="#4a3423" stroke-width="1.6" stroke-linejoin="round"><path d="M8 7 L17 14 L27 14 L36 7 L34 21 C34 30 29 36 22 36 C15 36 10 30 10 21 Z" fill="#e8944a"/><path d="M8 7 L17 14 L12.5 18 Z" fill="#c96f2e"/><path d="M36 7 L27 14 L31.5 18 Z" fill="#c96f2e"/><path d="M22 36 C18 36 15 33 14 28.5 C17 30.7 20 31.6 22 31.6 C24 31.6 27 30.7 30 28.5 C29 33 26 36 22 36 Z" fill="#fff3dc" stroke="none"/><circle cx="17.5" cy="22.5" r="1.7" fill="#4a3423" stroke="none"/><circle cx="26.5" cy="22.5" r="1.7" fill="#4a3423" stroke="none"/><path d="M20.2 27 h3.6 l-1.8 2.3 Z" fill="#4a3423" stroke="none"/></g></svg>`;
   const docIcon = `<svg width="40" height="48" viewBox="0 0 40 48"><path d="M6 2 h20 l10 10 v34 H6 Z" fill="#fff" stroke="#000" stroke-width="1.5"/><path d="M26 2 v10 h10" fill="#ddd" stroke="#000" stroke-width="1.5"/><path d="M11 20 h18 M11 26 h18 M11 32 h12" stroke="#888" stroke-width="1.4"/></svg>`;
   const picIcon = `<svg width="40" height="46" viewBox="0 0 40 46"><path d="M5 2 h22 l8 8 v34 H5 Z" fill="#fff" stroke="#000" stroke-width="1.5"/><path d="M27 2 v8 h8" fill="#ccc" stroke="#000" stroke-width="1.5"/><rect x="10" y="20" width="20" height="15" fill="#bfe0ef" stroke="#000" stroke-width="1"/><circle cx="16" cy="25" r="2.4" fill="#f4c542"/><path d="M11 34 l5 -6 4 4 5 -7 4 9 Z" fill="#6fae6f"/></svg>`;
   const hdIcon = `<svg width="46" height="44" viewBox="0 0 46 44"><g stroke="#000" stroke-width="1.5"><path d="M5 14 L23 6 L41 14 L41 30 L23 38 L5 30 Z" fill="#c9c9c9"/><path d="M5 14 L23 22 L41 14" fill="none"/><path d="M23 22 L23 38" fill="none"/><rect x="11" y="20" width="9" height="3" fill="#7fa7d8" stroke="none"/></g></svg>`;
@@ -739,6 +864,7 @@ const CONFIG = {
   function buildIOS(){
     const apps = [
       { label:"Goals",        open:"win-goals",    icon:gGoals },
+      { label:"fox.exe",      open:"win-gotchi",   icon:foxIcon },
       { label:"Macintosh HD", open:"win-hd",      icon:hdIcon },
       { label:"Mail",         open:"win-mail",     icon:envIcon },
       { label:"Internet",     act:"surf",          icon:gNet },
@@ -778,6 +904,7 @@ const CONFIG = {
       { label:"Music", open:"win-music", icon:folderIcon("#e4cf86") },
       { label:"Goals", open:"win-goals", icon:goalIcon },
       { label:"e-Mail", open:"win-mail", icon:envIcon },
+      { label:"fox.exe", open:"win-gotchi", icon:foxIcon },
     ];
     $("mobileHome").innerHTML = items.map(it=>{
       const attr = it.open ? `data-open="${it.open}"` : `data-act="${it.act}"`;
@@ -793,6 +920,7 @@ const CONFIG = {
       { label:"Photos", open:"win-photos", icon:folderIcon("#e7a6c4") },
       { label:"Music", open:"win-music", icon:folderIcon("#e4cf86") },
       { label:"Goals", open:"win-goals", icon:goalIcon },
+      { label:"fox.exe", open:"win-gotchi", icon:foxIcon },
       { label:"Read Me", open:"win-atm", icon:docIcon },
     ];
     $("hdGrid").innerHTML = items.map((it,i)=>
@@ -993,6 +1121,50 @@ const CONFIG = {
     const h = Math.round(m/60);   if (h < 24)  return h + "h ago";
     const d = Math.round(h/24);   return d + "d ago";
   }
+  /* ---------- fox.exe ---------- */
+  const GX_POSES = {
+    sleeping:{curl:1,zzz:1}, napping:{curl:1,zzz:1},
+    reading:{sit:1,at:"translate(258,212)",prop:"gxPropBook"},
+    snacking:{sit:1,at:"translate(258,212)",prop:"gxPropBowl"},
+    tinkering:{sit:1,at:"translate(258,212)",prop:"gxPropTools"},
+    window:{sit:1,at:"translate(364,236) scale(.85)"},
+    out:{note:1}
+  };
+  function gxShow(id,on){ const el=$(id); if(el) el.style.display=on?"":"none"; }
+  function gxPose(act){
+    const p=GX_POSES[act]||GX_POSES.window;
+    gxShow("gxCurl",p.curl); gxShow("gxZzz",p.zzz); gxShow("gxSit",p.sit); gxShow("gxPropNote",p.note);
+    ["gxPropBook","gxPropBowl","gxPropTools"].forEach(x=>gxShow(x,p.prop===x));
+    if(p.sit) $("gxSit").setAttribute("transform",p.at);
+    const dot=$("gxDot"); if(dot) dot.classList.toggle("away",act==="out");
+  }
+  function gxTime(iso){
+    return new Date(iso).toLocaleString("en-US",{timeZone:"America/New_York",month:"short",day:"numeric",hour:"numeric",minute:"2-digit"}).toLowerCase();
+  }
+  async function loadGotchi(){
+    try{
+      const res=await fetch("/api/gotchi"); if(!res.ok) return;
+      const g=await res.json();
+      gxPose(g.activity);
+      $("gxStatus").textContent=(g.name||"kitsu")+" — "+(g.note||g.activity);
+      $("gxLog").innerHTML=(g.log||[]).slice().reverse().map(e=>
+        `<div class="gx-row"><span class="gx-t">${esc(gxTime(e.t))}</span><span>${esc(e.note)}</span></div>`).join("");
+    }catch(e){ $("gxStatus").textContent="kitsu is unreachable. probably fine."; }
+  }
+  async function loadMoodRead(){
+    const box=$("jbMood"); if(!box) return;
+    try{
+      const res = await fetch("/api/mood");
+      if(!res.ok) return;
+      const m = await res.json();
+      if(!m || !m.blurb) return;
+      $("jbMoodEmoji").textContent = m.emoji || "🎧";
+      $("jbMoodWord").textContent = m.mood || "";
+      $("jbMoodBlurb").textContent = m.blurb;
+      $("jbMoodDay").textContent = "ai-read · " + (m.day||"");
+      box.style.display = "block";
+    }catch(e){ /* stay hidden */ }
+  }
   async function loadRecentSpins(){
     const box=$("jbRecent"), list=$("jbrList"), stamp=$("jbrStamp");
     if(!box) return;
@@ -1096,7 +1268,8 @@ const CONFIG = {
     setActive(w);
     if(id==="win-about") requestAnimationFrame(layoutAbout);
     if(id==="win-list") requestAnimationFrame(measureList);
-    if(id==="win-music"){ const m=CONFIG.moods[curMood]; if(m && loadedVid!==m.videoId){ loadMood(curMood, true); } else { setKaraoke((m&&m.line)||""); } loadRecentSpins(); }
+    if(id==="win-music"){ const m=CONFIG.moods[curMood]; if(m && loadedVid!==m.videoId){ loadMood(curMood, true); } else { setKaraoke((m&&m.line)||""); } loadRecentSpins(); loadMoodRead(); }
+    if(id==="win-gotchi"){ loadGotchi(); }
     if(id==="win-mail"){ mailLoadT=Date.now(); if(!isMobile()) requestAnimationFrame(()=>{ const n=$("mailNote"); if(n) n.focus(); }); }
     if(isMobile()){
       const b=w.querySelector(".win-body"); if(b) b.scrollTop=0;
@@ -1358,7 +1531,7 @@ const CONFIG = {
 
   /* ---------- boot ---------- */
   function boot(){
-    buildHD(); buildPhotos(); buildList(); buildMoods(); buildMobileHome(); buildIOS(); wireMail(); loadRecentSpins();
+    buildHD(); buildPhotos(); buildList(); buildMoods(); buildMobileHome(); buildIOS(); wireMail(); loadRecentSpins(); loadMoodRead();
     loadMood(0, false); $("karaoke").classList.remove("show");
     // wire all static windows; hide them initially
     document.querySelectorAll(".window").forEach(w=>{ wireWindow(w, { destroyOnClose: w.id.startsWith("photo-win") }); w.style.display="none"; });
