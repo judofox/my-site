@@ -1,39 +1,44 @@
 /**
- * my-site Worker — Spotify pipeline backbone
- * ------------------------------------------
+ * my-site Worker — Spotify pipeline + mood engine
+ * -----------------------------------------------
  * Routes (everything else falls through to static assets):
  *   GET /api/health            sanity check: config + token + last sync status
  *   GET /api/login?key=...     one-time Spotify OAuth kickoff (guarded by SETUP_KEY)
  *   GET /api/callback          OAuth redirect target; stores refresh token in KV
- *   GET /api/sync?key=...      manual sync trigger for testing (guarded)
- *   GET /api/music             public: cached recent tracks for the site to render
+ *   GET /api/sync?key=...      manual Spotify sync trigger (guarded)
+ *   GET /api/music             public: cached recent tracks
+ *   GET /api/mood              public: cached AI mood read
+ *   GET /api/mood/refresh?key= force-regenerate today's mood (guarded)
  *
- * Cron (every 30 min): pulls recently-played from Spotify, stores a snapshot
- * for /api/music, and appends into per-day play logs (spotify:log:YYYY-MM-DD)
- * that the mood summarizer will read later.
+ * Cron (every 30 min): syncs Spotify; generates the daily mood if missing.
  *
  * KV keys:
- *   spotify:refresh_token   long-lived token (from one-time OAuth)
- *   spotify:oauth_state     CSRF state during login flow (60s TTL)
- *   spotify:recent          {updatedAt, tracks:[...]} snapshot for the site
- *   spotify:log:YYYY-MM-DD  deduped play log per NY-time day (mood pipeline fuel)
+ *   spotify:refresh_token / spotify:oauth_state / spotify:recent
+ *   spotify:log:YYYY-MM-DD   deduped per-day play log (NY time)
+ *   mood:current             {day, generatedAt, mood, emoji, score, blurb, ...}
+ *   mood:YYYY-MM-DD          history (90-day TTL) — tamagotchi fuel
  *
- * Secrets (dashboard): SPOTIFY_CLIENT_SECRET, SETUP_KEY
- * Vars (wrangler.jsonc): SPOTIFY_CLIENT_ID, SITE_ORIGIN
+ * Secrets (dashboard): SPOTIFY_CLIENT_SECRET, SETUP_KEY, LLM_API_KEY
+ * Vars (wrangler.jsonc): SPOTIFY_CLIENT_ID, SITE_ORIGIN, LLM_PROVIDER, LLM_MODEL
  */
 
 const SPOTIFY_SCOPES = "user-read-recently-played user-read-currently-playing user-top-read";
+const MIN_PLAYS_FOR_MOOD = 5;
+const MOOD_INTERVAL_HOURS = 12;
+const MOOD_WINDOW_HOURS = 12;
 
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
     try {
       switch (url.pathname) {
-        case "/api/health":   return health(env);
-        case "/api/login":    return login(url, env);
-        case "/api/callback": return callback(url, env);
-        case "/api/sync":     return manualSync(url, env);
-        case "/api/music":    return music(env);
+        case "/api/health":       return health(env);
+        case "/api/login":        return login(url, env);
+        case "/api/callback":     return callback(url, env);
+        case "/api/sync":         return manualSync(url, env);
+        case "/api/music":        return music(env);
+        case "/api/mood":         return mood(env);
+        case "/api/mood/refresh": return moodRefresh(url, env);
         default:
           return json({ error: "not found" }, 404);
       }
@@ -44,16 +49,19 @@ export default {
   },
 
   async scheduled(event, env, ctx) {
-    ctx.waitUntil(syncSpotify(env));
+    ctx.waitUntil(
+      syncSpotify(env).then(() => maybeGenerateMood(env, false)),
+    );
   },
 };
 
 /* ---------------- routes ---------------- */
 
 async function health(env) {
-  const [token, recent] = await Promise.all([
+  const [token, recent, cur] = await Promise.all([
     env.SITE_DATA.get("spotify:refresh_token"),
     env.SITE_DATA.get("spotify:recent", "json"),
+    env.SITE_DATA.get("mood:current", "json"),
   ]);
   return json({
     ok: true,
@@ -61,6 +69,8 @@ async function health(env) {
     spotifyLinked: Boolean(token),
     lastSync: recent?.updatedAt ?? null,
     trackCount: recent?.tracks?.length ?? 0,
+    llm: { provider: env.LLM_PROVIDER ?? "anthropic", model: env.LLM_MODEL ?? null, keySet: Boolean(env.LLM_API_KEY) },
+    moodDay: cur?.day ?? null,
   });
 }
 
@@ -135,13 +145,28 @@ async function music(env) {
   });
 }
 
-/* ---------------- sync engine ---------------- */
+async function mood(env) {
+  const cur = await env.SITE_DATA.get("mood:current", "json");
+  if (!cur) return json({ error: "no mood yet" }, 404);
+  return json(cur, 200, {
+    "Cache-Control": "public, max-age=600",
+    "Access-Control-Allow-Origin": "*",
+  });
+}
+
+async function moodRefresh(url, env) {
+  const guard = requireKey(url, env);
+  if (guard) return guard;
+  const result = await maybeGenerateMood(env, true); // force
+  return json(result);
+}
+
+/* ---------------- spotify sync engine ---------------- */
 
 async function syncSpotify(env) {
   const refreshToken = await env.SITE_DATA.get("spotify:refresh_token");
   if (!refreshToken) return { ok: false, reason: "not linked yet — visit /api/login" };
 
-  // Refresh token -> short-lived access token (simple: fresh one per sync)
   const tokenRes = await fetch("https://accounts.spotify.com/api/token", {
     method: "POST",
     headers: {
@@ -155,7 +180,6 @@ async function syncSpotify(env) {
     return { ok: false, reason: "token refresh failed" };
   }
   const tokenData = await tokenRes.json();
-  // Spotify sometimes rotates refresh tokens — keep the newest
   if (tokenData.refresh_token) {
     await env.SITE_DATA.put("spotify:refresh_token", tokenData.refresh_token);
   }
@@ -175,18 +199,15 @@ async function syncSpotify(env) {
     name: item.track?.name ?? "unknown",
     artists: (item.track?.artists ?? []).map((a) => a.name),
     album: item.track?.album?.name ?? null,
-    image: item.track?.album?.images?.slice(-1)[0]?.url ?? null, // smallest
+    image: item.track?.album?.images?.slice(-1)[0]?.url ?? null,
     url: item.track?.external_urls?.spotify ?? null,
     durationMs: item.track?.duration_ms ?? null,
   }));
 
   const updatedAt = new Date().toISOString();
-
-  // 1) Snapshot for the site
   await env.SITE_DATA.put("spotify:recent", JSON.stringify({ updatedAt, tracks }));
 
-  // 2) Accumulate per-day logs (NY time) for the mood summarizer.
-  //    Deduped by playedAt; kept 30 days.
+  // per-day logs (NY time), deduped, 30-day TTL — mood + tamagotchi fuel
   const byDay = new Map();
   for (const t of tracks) {
     const day = nyDate(t.playedAt);
@@ -199,24 +220,196 @@ async function syncSpotify(env) {
     const seen = new Set(existing.map((p) => p.playedAt));
     const merged = existing.concat(plays.filter((p) => !seen.has(p.playedAt)));
     merged.sort((a, b) => a.playedAt.localeCompare(b.playedAt));
-    await env.SITE_DATA.put(key, JSON.stringify(merged), {
-      expirationTtl: 60 * 60 * 24 * 30,
-    });
+    await env.SITE_DATA.put(key, JSON.stringify(merged), { expirationTtl: 60 * 60 * 24 * 30 });
   }
 
   return { ok: true, updatedAt, pulled: tracks.length };
 }
 
+/* ---------------- mood engine ---------------- */
+
+async function maybeGenerateMood(env, force) {
+  if (!env.LLM_API_KEY) return { ok: false, reason: "LLM_API_KEY not set" };
+
+  const today = nyDate(new Date().toISOString());
+  const current = await env.SITE_DATA.get("mood:current", "json");
+  const ageMs = current ? Date.now() - Date.parse(current.generatedAt) : Infinity;
+  if (!force && ageMs < MOOD_INTERVAL_HOURS * 3600e3) {
+    return { ok: true, skipped: `current mood is ${Math.round(ageMs/3600e3)}h old — regenerates at ${MOOD_INTERVAL_HOURS}h` };
+  }
+
+  // plays from the last MOOD_WINDOW_HOURS only (may span two calendar days)
+  const cutoff = Date.now() - MOOD_WINDOW_HOURS * 3600e3;
+  const days = lastNDays(2);
+  const logs = await Promise.all(days.map((d) => env.SITE_DATA.get(`spotify:log:${d}`, "json")));
+  const plays = days.map((d, i) => ({
+    day: d,
+    plays: (logs[i] ?? []).filter((p) => Date.parse(p.playedAt) >= cutoff),
+  }));
+  const total = plays.reduce((n, p) => n + p.plays.length, 0);
+  if (total < MIN_PLAYS_FOR_MOOD) return { ok: false, reason: `only ${total} plays in the last ${MOOD_WINDOW_HOURS}h — keeping previous mood` };
+
+  const digest = buildDigest(plays);
+  const prompt = buildMoodPrompt(digest);
+
+  let text;
+  try {
+    text = await llmComplete(env, prompt);
+  } catch (err) {
+    console.error("llm call failed", err);
+    return { ok: false, reason: "llm call failed: " + err.message };
+  }
+
+  let parsed;
+  try {
+    parsed = JSON.parse(text.replace(/```json|```/g, "").trim());
+  } catch {
+    console.error("llm returned unparseable output", text);
+    return { ok: false, reason: "llm output was not valid JSON" };
+  }
+
+  const record = {
+    day: today,
+    generatedAt: new Date().toISOString(),
+    mood: String(parsed.mood ?? "").slice(0, 40),
+    emoji: String(parsed.emoji ?? "🎧").slice(0, 8),
+    score: clampInt(parsed.score, 0, 100, 50),
+    blurb: String(parsed.blurb ?? "").slice(0, 280),
+    basedOn: { plays: total, windowHours: MOOD_WINDOW_HOURS, topArtists: digest.topArtists.slice(0, 5).map((a) => a.name) },
+    provider: env.LLM_PROVIDER ?? "anthropic",
+  };
+
+  await env.SITE_DATA.put("mood:current", JSON.stringify(record));
+  await env.SITE_DATA.put(`mood:${today}`, JSON.stringify(record), { expirationTtl: 60 * 60 * 24 * 90 });
+  return { ok: true, record };
+}
+
+function buildDigest(plays) {
+  const artistCount = new Map();
+  const sampleTracks = [];
+  const hourBuckets = { morning: 0, afternoon: 0, evening: 0, latenight: 0 };
+
+  for (const { plays: dayPlays } of plays) {
+    for (const t of dayPlays) {
+      for (const a of t.artists ?? []) artistCount.set(a, (artistCount.get(a) ?? 0) + 1);
+      if (sampleTracks.length < 25) sampleTracks.push(`${t.name} — ${(t.artists ?? []).join(", ")}`);
+      const hour = Number(new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", hour: "numeric", hour12: false }).format(new Date(t.playedAt)));
+      if (hour >= 5 && hour < 12) hourBuckets.morning++;
+      else if (hour >= 12 && hour < 18) hourBuckets.afternoon++;
+      else if (hour >= 18 && hour < 24) hourBuckets.evening++;
+      else hourBuckets.latenight++;
+    }
+  }
+  const topArtists = [...artistCount.entries()]
+    .map(([name, count]) => ({ name, count }))
+    .sort((a, b) => b.count - a.count);
+
+  return {
+    topArtists,
+    sampleTracks,
+    hourBuckets,
+    perDay: plays.map((p) => ({ day: p.day, count: p.plays.length })),
+  };
+}
+
+function buildMoodPrompt(d) {
+  return `You write a one-line daily mood read for David's personal website, based on his recent Spotify listening. It appears in a retro Mac OS "Jukebox" window.
+
+Voice rules:
+- dry, specific, casual — like a sharp friend noticing a pattern
+- reference 1 or 2 actual artists or tracks from the data
+- never use: "vibes", "journey", "soundtrack", "eclectic", exclamation points, or generic hype
+- blurb max 25 words
+
+Listening data (last 12 hours, America/New_York):
+Top artists: ${d.topArtists.slice(0, 8).map((a) => `${a.name} (${a.count} plays)`).join(", ") || "none"}
+Plays per day: ${d.perDay.map((p) => `${p.day}: ${p.count}`).join(", ")}
+Time of day: morning ${d.hourBuckets.morning}, afternoon ${d.hourBuckets.afternoon}, evening ${d.hourBuckets.evening}, late-night ${d.hourBuckets.latenight}
+Sample tracks:
+${d.sampleTracks.map((t) => "- " + t).join("\n")}
+
+Respond with ONLY this JSON, no markdown fences, no other text:
+{"mood": "<one or two word mood label, lowercase>", "emoji": "<single emoji>", "score": <0-100 int, energy/positivity of the listening>, "blurb": "<the mood read>"}`;
+}
+
+/* ---------------- provider-agnostic LLM adapter ---------------- */
+
+async function llmComplete(env, prompt) {
+  const provider = (env.LLM_PROVIDER ?? "anthropic").toLowerCase();
+  const model = env.LLM_MODEL ?? defaultModel(provider);
+
+  if (provider === "anthropic") {
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": env.LLM_API_KEY,
+        "anthropic-version": "2023-06-01",
+      },
+      body: JSON.stringify({ model, max_tokens: 500, messages: [{ role: "user", content: prompt }] }),
+    });
+    if (!res.ok) throw new Error(`anthropic ${res.status}: ${await res.text()}`);
+    const data = await res.json();
+    return (data.content ?? []).filter((b) => b.type === "text").map((b) => b.text).join("\n");
+  }
+
+  if (provider === "openai") {
+    const res = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${env.LLM_API_KEY}` },
+      body: JSON.stringify({ model, messages: [{ role: "user", content: prompt }] }),
+    });
+    if (!res.ok) throw new Error(`openai ${res.status}: ${await res.text()}`);
+    const data = await res.json();
+    return data.choices?.[0]?.message?.content ?? "";
+  }
+
+  if (provider === "google") {
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${env.LLM_API_KEY}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
+      },
+    );
+    if (!res.ok) throw new Error(`google ${res.status}: ${await res.text()}`);
+    const data = await res.json();
+    return data.candidates?.[0]?.content?.parts?.map((p) => p.text).join("\n") ?? "";
+  }
+
+  throw new Error(`unknown LLM_PROVIDER: ${provider}`);
+}
+
+function defaultModel(provider) {
+  if (provider === "anthropic") return "claude-sonnet-4-6";
+  if (provider === "openai") return "gpt-4o-mini";
+  if (provider === "google") return "gemini-2.0-flash";
+  return "";
+}
+
 /* ---------------- helpers ---------------- */
 
 function nyDate(isoString) {
-  // YYYY-MM-DD in America/New_York for a given instant
   return new Intl.DateTimeFormat("en-CA", {
     timeZone: "America/New_York",
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
   }).format(new Date(isoString));
+}
+
+function lastNDays(n) {
+  const out = [];
+  const now = Date.now();
+  for (let i = 0; i < n; i++) out.push(nyDate(new Date(now - i * 86400000).toISOString()));
+  return out;
+}
+
+function clampInt(v, min, max, fallback) {
+  const n = Number(v);
+  if (!Number.isFinite(n)) return fallback;
+  return Math.max(min, Math.min(max, Math.round(n)));
 }
 
 function requireKey(url, env) {
